@@ -13,6 +13,7 @@ TEXT_COLOR = "#EAEAEA"
 ACCENT_BLUE = "#3366FF"
 HIGHLIGHT_GREEN = "#1DB954"
 ACCENT_PURPLE = "#8A2BE2"
+ACCENT_ORANGE = "#FF9F1C"
 
 # Force Seaborn/Matplotlib into the dark modern theme
 plt.style.use("dark_background")
@@ -45,6 +46,17 @@ def load_data():
     }
     df = pd.DataFrame(data)
     df["Revenue"] = df["Price"] * df["Units_Sold"] * (1 - df["Discount"])
+    
+    # Adding realistic subcategories to make the Treemap hierarchical and visually rich
+    subcategories = {
+        "Electronics": ["Smart Devices", "Wearables", "Accessories"],
+        "Software": ["Cloud SaaS", "Enterprise License", "Cybersecurity"],
+        "Hardware": ["Servers & Storage", "Workstations", "Networking Gear"],
+        "Services": ["Consulting", "Managed Services", "System Integration"]
+    }
+    # Deterministically assign subcategories based on random choice
+    sub_rng = np.random.RandomState(42)
+    df["Subcategory"] = df.apply(lambda row: sub_rng.choice(subcategories[row["Category"]]), axis=1)
     return df
 
 
@@ -103,12 +115,29 @@ with col4:
 # --- Full Width Interactive Plotly Chart ---
 st.subheader("5. Revenue Composition (Plotly Treemap)")
 fig5 = px.treemap(
-    df, path=["Category"], values="Revenue", title="Revenue Share by Product Category"
+    df,
+    path=["Category", "Subcategory"],
+    values="Revenue",
+    color="Category",
+    color_discrete_map={
+        "Hardware": ACCENT_BLUE,
+        "Services": HIGHLIGHT_GREEN,
+        "Software": ACCENT_PURPLE,
+        "Electronics": ACCENT_ORANGE,
+    },
+    title="Revenue Share by Product Category & Subcategory",
+    height=450,
 )
+
+fig5.update_traces(
+    texttemplate="<b>%{label}</b><br>$%{value:,.0f}",
+    hovertemplate="<b>%{label}</b><br>Revenue: $%{value:,.2f}<br>Share: %{percentRoot:.1%}<extra></extra>"
+)
+
 fig5.update_layout(
     plot_bgcolor=BG_COLOR,
     paper_bgcolor=BG_COLOR,
     font_color=TEXT_COLOR,
-    colorway=[ACCENT_BLUE, HIGHLIGHT_GREEN, ACCENT_PURPLE, TEXT_COLOR],
+    margin=dict(t=50, l=10, r=10, b=10),
 )
 st.plotly_chart(fig5, use_container_width=True)
